@@ -1,0 +1,79 @@
+private void Asignar(IWebDriver driver, WebDriverWait wait, int timeSleep, List<Agente> agentesList,
+            Actions actions, int simultaneidad)
+        {
+            foreach (var agente in agentesList)
+            {
+                // Validacion (Agentes con simultaneidad)
+                if (agente.Ticket >= simultaneidad)
+                {
+                    continue;
+                }
+
+                // Asignamos casos (Solo si hay casos presentes)
+                var labelElements = wait.Until(ExpectedConditions.PresenceOfAllElementsLocatedBy(By.CssSelector("table > tbody:nth-child(2) > tr > td > div > label:nth-child(2)")));
+                while (labelElements.Count > 0)
+                {
+                    int casos = Math.Min(simultaneidad - agente.Ticket, labelElements.Count);
+                    for (int i = 0; i <= casos; i++)
+                    {
+                        labelElements[i].Click();
+                        Thread.Sleep(timeSleep);
+                    }
+
+                    // Seleccionamos el boton (Editar)
+                    IWebElement editarElement = wait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("button[data-test-id='bulk-actions-edit-button']")));
+                    editarElement.Click();
+
+                    // Escribimos el nombre del agente a asignar
+                    wait.Until(elementExist => driver.FindElement(By.CssSelector("div[id='mn_16']")));
+                    //Thread.Sleep(timeSleep);
+                    var aggentAsigElement = driver.FindElement(By.CssSelector("div[id='mn_16']"));
+                    aggentAsigElement.Click();
+
+                    //Thread.Sleep(timeSleep);
+                    var inputElement = aggentAsigElement.FindElement(By.CssSelector("input"));
+                    actions.Click(inputElement);
+                    foreach (char c in agente.Name)
+                    {
+                        actions.SendKeys(c.ToString()).Perform();
+                    }
+                    //Thread.Sleep(timeSleep);
+                    //actions.SendKeys(agente.Name).Build().Perform();
+
+                    // Seleccionamos el agente a asignar
+                    Thread.Sleep(timeSleep);
+                    var listaOrdenada = driver.FindElements(By.CssSelector("html>body>div:nth-of-type(7)>div:nth-of-type(2)>ul>li"));
+                    foreach (var item in listaOrdenada)
+                    {
+                        if (radioButtonWppLua.Checked && item.Text == "WhatsApp SSC -AMC/" + agente.Name)
+                        {
+                            item.Click();
+                        }
+
+                        if (radioButtonWppVts.Checked && item.Text == "WhatsApp Ventas SSC/" + agente.Name)
+                        {
+                            item.Click();
+                        }
+                    }
+
+                    // Presionamos el boton (Enviar)
+                    IWebElement enviarElement = wait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("div[class='sc-1hg3so9-0 bhZefU']")));
+                    enviarElement.Click();
+
+                    // Esperamos antes de asignar nuevo caso
+                    while (driver.FindElements(By.CssSelector("table:nth-of-type(1) tr:nth-of-type(2) td:nth-of-type(1) div > svg:nth-of-type(1)")).Count != 0)
+                    {
+                        Thread.Sleep(timeSleep);
+                    }
+
+                    //Thread.Sleep(timeSleep);
+                    break;
+                }
+
+                // Refrezcamos la pagina (Solo si no hay casos presentes)
+                while (driver.FindElements(By.CssSelector("table > tbody:nth-child(2) > tr > td > div > label:nth-child(2)")).Count < 1)
+                {
+                    driver.FindElement(By.CssSelector("button[data-test-id='views_views-list_header-refresh']")).Click();
+                    Thread.Sleep(timeSleep);
+                }
+            }
